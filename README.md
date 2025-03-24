@@ -1,4 +1,4 @@
-# S25_roboticsII
+# g5_roboticsII
 ROS2 Workspace for S25 RoboticsII
 
 ## Fork the repository
