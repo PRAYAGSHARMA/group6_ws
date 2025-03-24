@@ -1,4 +1,4 @@
-# group6_roboticsII
+# group6_ws
 ROS2 Workspace for group6 RoboticsII
 
 ## Fork the repository
