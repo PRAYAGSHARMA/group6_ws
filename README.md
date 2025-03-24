@@ -1,8 +1,8 @@
 # group6_ws
 ROS2 Workspace for group6 RoboticsII
-Prayag Sharma
-Arslan Lau
-Sun Jiawei
+Prayag Sharma,
+Arslan Lau,
+Sun Jiawei, and
 Trent Alexander Maffeo
 
 ## Fork the repository
