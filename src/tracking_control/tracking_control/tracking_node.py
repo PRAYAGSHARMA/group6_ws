@@ -95,8 +95,8 @@ class TrackingNode(Node):
         # You can decide to filter the detected object pose here
         # For example, you can filter the pose based on the distance from the camera
         # or the height of the object
-        # if np.linalg.norm(center_points) > 3 or center_points[2] > 0.7:
-        #     return
+        if np.linalg.norm(center_points) > 3 or center_points[2] > 0.7:
+            return
         
         try:
             # Transform the center point from the camera frame to the world frame
@@ -120,8 +120,8 @@ class TrackingNode(Node):
         # You can decide to filter the detected object pose here
         # For example, you can filter the pose based on the distance from the camera
         # or the height of the object
-        # if np.linalg.norm(center_points) > 3 or center_points[2] > 0.7:
-        #     return
+        if np.linalg.norm(center_points) > 3 or center_points[2] > 0.7:
+            return
         
         try:
             # Transform the center point from the camera frame to the world frame
@@ -169,13 +169,11 @@ class TrackingNode(Node):
             self.pub_control_cmd.publish(cmd_vel)
             return
         
-        # Get the current object pose in the robot base_footprint frame
         current_obs_pose, current_goal_pose = self.get_current_poses()
+        if current_goal_pose is None:
+            return
         
-        # TODO: get the control velocity command
-        cmd_vel = self.controller()
-        
-        # publish the control command
+        cmd_vel = self.controller(current_obs_pose, current_goal_pose)
         self.pub_control_cmd.publish(cmd_vel)
         #################################################
     
@@ -185,13 +183,50 @@ class TrackingNode(Node):
         
         ########### Write your code here ###########
         
-        # TODO: Update the control velocity command
         cmd_vel = Twist()
-        cmd_vel.linear.x = 0
-        cmd_vel.linear.y = 0
-        cmd_vel.angular.z = 0
+        
+        # Compute the Euclidean distance to the obstacle (in the x-y plane)
+        obs_distance = math.hypot(obs_pose[0], obs_pose[1])
+        
+        # Behavior 1: Obstacle avoidance
+        if obs_distance < 0.7:
+            # Stop forward motion
+            cmd_vel.linear.x = 0.0
+            # Decide lateral velocity to move away from obstacle
+            # If obstacle lateral offset is almost zero, choose a default direction (move right)
+            if abs(obs_pose[1]) < 0.1:
+                lateral_direction = -1.0  # default: move right
+            else:
+                # Move in the opposite lateral direction from the obstacle
+                lateral_direction = -math.copysign(1.0, obs_pose[1])
+            
+            k_avoid = 0.5 
+            cmd_vel.linear.y = k_avoid * (0.7 - obs_distance) * lateral_direction
+            cmd_vel.angular.z = 0.0
+            return cmd_vel
+
+        # Behavior 2: Goal alignment and forward motion
+         angle_to_goal = math.atan2(goal_pose[1], goal_pose[0])
+        
+        # Threshold for angle alignment (radians)
+        angle_threshold = 0.1
+        
+        k_rot = 1.0      # rotational gain
+        k_forward = 0.5  # forward speed gain (can be scaled with goal distance if desired)
+        
+        # If the goal is not aligned (angle error is above threshold)
+        if abs(angle_to_goal) > angle_threshold:
+            # Rotate in place to align with the goal (no forward motion)
+            cmd_vel.linear.x = 0.0
+            cmd_vel.angular.z = k_rot * angle_to_goal
+        else:
+            # Once aligned, move forward in a straight line
+            cmd_vel.linear.x = k_forward
+            cmd_vel.angular.z = 0.0
+        
+        # No lateral motion when going straight toward the goal
+        cmd_vel.linear.y = 0.0
         return cmd_vel
-    
         ############################################
 
 def main(args=None):
